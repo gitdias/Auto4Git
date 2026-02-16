@@ -1,27 +1,36 @@
 # Auto4Git 🚀
 
-**Intelligent Git Automation with SSH Authentication**
+**Automação inteligente para Git com autenticação SSH**
 
-Auto4Git is a shell script that simplifies and automates the commit, push, and tag creation process in Git, with full SSH authentication validation and identity configuration.
+Auto4Git é um script shell que simplifica e automatiza o processo de commit, push e criação de tags no Git, com validação completa de autenticação SSH e configuração de identidade.
 
-## ✨ Features
+![Version](https://img.shields.io/badge/version-0.0.2-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Shell](https://img.shields.io/badge/shell-bash-lightgrey)
+![Platform](https://img.shields.io/badge/platform-linux-orange)
 
-- ✅ **Automatic SSH Validation** - Automatically checks and configures SSH keys
-- ✅ **GitHub Connection Test** - Validates authentication before any operation
-- ✅ **Identity Configuration** - Interactively detects and configures Git username/email
-- ✅ **HTTPS → SSH Conversion** - Automatically converts remote URLs
-- ✅ **Colored Messages** - Clear and informative visual interface
-- ✅ **Annotated Tag Creation** - Full support for semantic versioning
-- ✅ **Error Handling** - Validation at each step of the process
-- ✅ **Smart Detection** - Identifies GitHub user and SSH key email
+## ✨ Características
 
-## 📋 Prerequisites
+- ✅ **Modo interativo intuitivo** - Execute sem argumentos e seja guiado passo a passo
+- ✅ **Validação automática de SSH** - Verifica e configura chaves SSH automaticamente
+- ✅ **Tutorial SSH didático** - Ajuda visual completa em caso de falha de autenticação
+- ✅ **Teste de conexão com GitHub** - Valida autenticação antes de qualquer operação
+- ✅ **Configuração de identidade** - Detecta e configura nome/email do Git interativamente
+- ✅ **Input multi-linha** - Cole texto direto ou informe caminho de arquivo
+- ✅ **Conversão HTTPS → SSH** - Converte URLs remotas automaticamente
+- ✅ **Tags obrigatórias** - Sempre cria tags anotadas com versionamento semântico
+- ✅ **Mensagens coloridas** - Interface visual clara e profissional
+- ✅ **Tratamento de erros** - Validação em cada etapa do processo
+- ✅ **Compatibilidade legado** - Mantém suporte para argumentos da v0.0.1
 
-- Git installed
-- SSH key configured (the script can help configure)
-- Bash 4.0 or higher
-- Access to GitHub via SSH
+## 📋 Pré-requisitos
 
-## 🔧 Installation
+- Git instalado
+- Bash 4.0 ou superior
+- Chave SSH configurada (o script pode ajudar a configurar)
+- Acesso ao GitHub via SSH
 
-### Option 1: Clone the repository
+## 🔧 Instalação
+
+### Opção 1: Clone o repositório
+

@@ -1,50 +1,267 @@
 #!/bin/bash
 
-# Script de Upload Automatizado para Git com SSH
-# Uso: ./git-upload.sh --msg arquivo.txt [--tag v1.0.0]
+# ============================================================================
+# Auto4Git - Automação Git com SSH
+# ============================================================================
+# Autor:       Sandro Dias (gitdias)
+# Contato:     pro.sandrodias@gmail.com
+# Repositório: https://github.com/gitdias/Auto4Git
+# Versão:      0.0.2
+# Licença:     MIT
+# ============================================================================
+# Descrição:   Automatiza commit, tag e push com validação SSH completa
+# Sintaxe:     ./auto4git.sh [--tag <versão> --tagmsg <arquivo> --msg <arquivo>]
+# ============================================================================
 
-# Cores para output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Variáveis
-MSG_FILE=""
+# Variáveis globais
 TAG=""
+TAG_MSG=""
+COMMIT_MSG=""
 BRANCH=$(git branch --show-current 2>/dev/null)
+VERSION="0.0.2"
 
-# Função para exibir uso
-show_usage() {
-    echo "Uso: $0 --msg <arquivo> [--tag <versao>]"
+# ============================================================================
+# FUNÇÕES DE UTILIDADE
+# ============================================================================
+
+# Exibir banner
+show_banner() {
     echo ""
-    echo "Opções:"
-    echo "  --msg    Arquivo com a mensagem de commit (obrigatório)"
-    echo "  --tag    Tag para criar (opcional, ex: v1.0.0)"
+    echo "════════════════════════════════════════"
+    echo "         Auto4Git v${VERSION}"
+    echo "    Automação Git com SSH"
+    echo "════════════════════════════════════════"
     echo ""
-    echo "Exemplos:"
-    echo "  $0 --msg ../msg.txt"
-    echo "  $0 --msg changelog.txt --tag v2.1.0"
-    exit 1
 }
 
-# Função para verificar se estamos em um repositório Git
-check_git_repo() {
-    if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        echo -e "${RED}[ERRO]${NC} Não estamos em um repositório Git!"
+# Exibir uso
+show_usage() {
+    echo "Uso: $0 [opções]"
+    echo ""
+    echo "Modo Interativo (padrão):"
+    echo "  $0"
+    echo ""
+    echo "Modo Legado (compatibilidade):"
+    echo "  $0 --tag <versão> --tagmsg <arquivo> --msg <arquivo>"
+    echo ""
+    echo "Opções:"
+    echo "  --tag      Versão da tag (ex: v1.0.0)"
+    echo "  --tagmsg   Arquivo com mensagem da tag"
+    echo "  --msg      Arquivo com mensagem do commit"
+    echo "  -h, --help Exibe esta ajuda"
+    echo ""
+    echo "Exemplos:"
+    echo "  $0"
+    echo "  $0 --tag v1.2.3 --tagmsg release.txt --msg commit.txt"
+    exit 0
+}
+
+# Ler input multi-linha ou arquivo
+read_input_or_file() {
+    local prompt="$1"
+    local example="$2"
+    local result=""
+
+    echo ""
+    echo "[EXEMPLO] $example"
+    echo ""
+    echo "[ENTRADA] $prompt"
+    echo "          Cole o texto (pressione Ctrl+D para finalizar)"
+    echo "          OU informe o caminho do arquivo"
+    echo ""
+
+    # Ler primeira linha
+    read -r first_line
+
+    # Verificar se é um arquivo
+    if [ -f "$first_line" ]; then
+        if [ ! -s "$first_line" ]; then
+            echo "[ERRO] Arquivo vazio: $first_line"
+            exit 1
+        fi
+        result=$(cat "$first_line")
+        echo "[OK] Conteúdo lido do arquivo: $first_line"
+    else
+        # É texto direto, ler até Ctrl+D
+        result="$first_line"
+        while IFS= read -r line; do
+            result="${result}"$'\n'"${line}"
+        done
+        echo "[OK] Texto capturado com sucesso"
+    fi
+
+    # Validar se não está vazio
+    if [ -z "$result" ]; then
+        echo "[ERRO] Conteúdo não pode ser vazio!"
+        exit 1
+    fi
+
+    echo "$result"
+}
+
+# Validar formato de tag semântico
+validate_tag_format() {
+    local tag="$1"
+
+    if ! echo "$tag" | grep -qE "^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$"; then
+        echo "[ERRO] Formato de tag inválido: $tag"
+        echo "[INFO] Use versionamento semântico: v1.2.3, v2.0.0-beta, etc."
         exit 1
     fi
 }
 
-# Função para verificar e configurar identidade Git
+# ============================================================================
+# TUTORIAL SSH
+# ============================================================================
+
+show_ssh_tutorial() {
+    echo ""
+    echo "════════════════════════════════════════════════════════════════"
+    echo "  ERRO: Autenticação SSH com GitHub falhou!"
+    echo "════════════════════════════════════════════════════════════════"
+    echo ""
+    echo "────────────────────────────────────────────────────────────────"
+    echo "  TUTORIAL: Como Configurar SSH para GitHub"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "PASSO 1/5: Gerar Chave SSH"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  Execute o comando:"
+    echo "  \$ ssh-keygen -t ed25519 -C \"seu-email@example.com\""
+    echo ""
+    echo "  → Pressione Enter para aceitar o local padrão"
+    echo "  → Digite uma senha forte (recomendado) ou deixe em branco"
+    echo ""
+    echo "PASSO 2/5: Iniciar ssh-agent"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  Execute o comando:"
+    echo "  \$ eval \"\$(ssh-agent -s)\""
+    echo ""
+    echo "PASSO 3/5: Adicionar Chave ao ssh-agent"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  Execute o comando:"
+    echo "  \$ ssh-add ~/.ssh/id_ed25519"
+    echo ""
+    echo "PASSO 4/5: Copiar Chave Pública"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  Execute o comando:"
+    echo "  \$ cat ~/.ssh/id_ed25519.pub"
+    echo ""
+    echo "  → Copie TODA a saída (de ssh-ed25519 até o email)"
+    echo ""
+    echo "PASSO 5/5: Adicionar Chave no GitHub"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  1. Acesse: https://github.com/settings/keys"
+    echo "  2. Clique em \"New SSH key\""
+    echo "  3. Título: CachyOS ($(date +%Y)) (ou outro descritivo)"
+    echo "  4. Cole a chave pública copiada"
+    echo "  5. Clique em \"Add SSH key\""
+    echo ""
+    echo "────────────────────────────────────────────────────────────────"
+    echo "  TESTAR CONEXÃO:"
+    echo "────────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  Execute o comando:"
+    echo "  \$ ssh -T git@github.com"
+    echo ""
+    echo "  → Deve retornar: \"Hi username! You've successfully...\""
+    echo ""
+    echo "════════════════════════════════════════════════════════════════"
+    echo "Após configurar, execute o Auto4Git novamente!"
+    echo "════════════════════════════════════════════════════════════════"
+    echo ""
+}
+
+# ============================================================================
+# VALIDAÇÕES SSH
+# ============================================================================
+
+test_github_ssh() {
+    echo "[SSH] Testando conexão SSH com GitHub..."
+
+    if timeout 10 ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+        echo "[OK] Autenticação SSH com GitHub bem-sucedida!"
+        USERNAME=$(timeout 10 ssh -T git@github.com 2>&1 | grep -o "Hi [^!]*" | cut -d' ' -f2)
+        echo "[INFO] Conectado como: $USERNAME"
+        return 0
+    else
+        echo "[ERRO] Falha na autenticação SSH com GitHub!"
+        show_ssh_tutorial
+        exit 1
+    fi
+}
+
+check_ssh_agent() {
+    echo "[SSH] Verificando ssh-agent..."
+
+    if ! pgrep -u "$USER" ssh-agent > /dev/null; then
+        echo "[INFO] Iniciando ssh-agent..."
+        eval "$(ssh-agent -s)"
+        echo "[OK] ssh-agent iniciado"
+    else
+        echo "[OK] ssh-agent está rodando"
+    fi
+}
+
+check_ssh_keys_loaded() {
+    echo "[SSH] Verificando chaves SSH..."
+
+    if ssh-add -l > /dev/null 2>&1; then
+        echo "[OK] Chaves SSH carregadas no agent"
+        return 0
+    fi
+
+    echo "[INFO] Procurando chaves SSH..."
+
+    SSH_KEYS=(
+        "$HOME/.ssh/id_ed25519"
+        "$HOME/.ssh/id_rsa"
+        "$HOME/.ssh/id_ecdsa"
+    )
+
+    for key in "${SSH_KEYS[@]}"; do
+        if [ -f "$key" ]; then
+            echo "[INFO] Encontrada: $key"
+            echo "[INFO] Adicionando ao ssh-agent..."
+
+            if ssh-add "$key" 2>/dev/null; then
+                echo "[OK] Chave adicionada"
+                return 0
+            else
+                ssh-add "$key"
+                if [ $? -eq 0 ]; then
+                    return 0
+                fi
+            fi
+        fi
+    done
+
+    echo "[AVISO] Nenhuma chave encontrada no ssh-agent"
+    echo "[INFO] Conexão SSH pode funcionar mesmo assim"
+}
+
+# ============================================================================
+# VALIDAÇÕES GIT
+# ============================================================================
+
+check_git_repo() {
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        echo "[ERRO] Não estamos em um repositório Git!"
+        exit 1
+    fi
+}
+
 check_git_identity() {
-    echo -e "${BLUE}[GIT]${NC} Verificando identidade do Git..."
+    echo "[GIT] Verificando identidade..."
 
     GIT_NAME=$(git config user.name)
     GIT_EMAIL=$(git config user.email)
 
-    # Se não houver configuração global, verificar local
     if [ -z "$GIT_NAME" ]; then
         GIT_NAME=$(git config --global user.name)
     fi
@@ -53,63 +270,58 @@ check_git_identity() {
         GIT_EMAIL=$(git config --global user.email)
     fi
 
-    # Se ainda não houver nome ou email, solicitar
     if [ -z "$GIT_NAME" ] || [ -z "$GIT_EMAIL" ]; then
-        echo -e "${YELLOW}[AVISO]${NC} Identidade Git não configurada!"
+        echo "[AVISO] Identidade Git não configurada"
         echo ""
 
-        # Tentar obter do GitHub se possível
         GITHUB_USER=$(timeout 5 ssh -T git@github.com 2>&1 | grep -o "Hi [^!]*" | cut -d' ' -f2)
 
         if [ -z "$GIT_NAME" ]; then
             if [ -n "$GITHUB_USER" ]; then
-                echo -e "${BLUE}[INFO]${NC} Usuário GitHub detectado: $GITHUB_USER"
-                echo -ne "${YELLOW}[PERGUNTA]${NC} Nome para commits [$GITHUB_USER]: "
+                echo "[INFO] Usuário GitHub detectado: $GITHUB_USER"
+                echo -n "Nome para commits [$GITHUB_USER]: "
             else
-                echo -ne "${YELLOW}[PERGUNTA]${NC} Digite seu nome para commits: "
+                echo -n "Nome para commits: "
             fi
 
             read -r input_name
             GIT_NAME="${input_name:-$GITHUB_USER}"
 
             if [ -z "$GIT_NAME" ]; then
-                echo -e "${RED}[ERRO]${NC} Nome não pode ser vazio!"
+                echo "[ERRO] Nome não pode ser vazio!"
                 exit 1
             fi
         fi
 
         if [ -z "$GIT_EMAIL" ]; then
-            # Tentar obter email da chave SSH
             SSH_EMAIL=$(ssh-add -L 2>/dev/null | grep -o "[a-zA-Z0-9._%+-]\+@[a-zA-Z0-9.-]\+\.[a-zA-Z]\{2,\}" | head -n1)
 
             if [ -n "$SSH_EMAIL" ]; then
-                echo -e "${BLUE}[INFO]${NC} Email detectado da chave SSH: $SSH_EMAIL"
-                echo -ne "${YELLOW}[PERGUNTA]${NC} Email para commits [$SSH_EMAIL]: "
+                echo "[INFO] Email detectado: $SSH_EMAIL"
+                echo -n "Email para commits [$SSH_EMAIL]: "
             else
-                echo -ne "${YELLOW}[PERGUNTA]${NC} Digite seu email para commits: "
+                echo -n "Email para commits: "
             fi
 
             read -r input_email
             GIT_EMAIL="${input_email:-$SSH_EMAIL}"
 
             if [ -z "$GIT_EMAIL" ]; then
-                echo -e "${RED}[ERRO]${NC} Email não pode ser vazio!"
+                echo "[ERRO] Email não pode ser vazio!"
                 exit 1
             fi
 
-            # Validar formato de email básico
             if ! echo "$GIT_EMAIL" | grep -qE "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"; then
-                echo -e "${RED}[ERRO]${NC} Formato de email inválido!"
+                echo "[ERRO] Formato de email inválido!"
                 exit 1
             fi
         fi
 
-        # Perguntar se quer configurar globalmente ou apenas localmente
         echo ""
-        echo -e "${YELLOW}[PERGUNTA]${NC} Configurar para:"
+        echo "Configurar para:"
         echo "  1) Apenas este repositório (local)"
         echo "  2) Todos os repositórios (global) - Recomendado"
-        echo -ne "Escolha (1/2) [2]: "
+        echo -n "Escolha (1/2) [2]: "
         read -r config_scope
 
         config_scope="${config_scope:-2}"
@@ -117,290 +329,300 @@ check_git_identity() {
         if [ "$config_scope" = "2" ]; then
             git config --global user.name "$GIT_NAME"
             git config --global user.email "$GIT_EMAIL"
-            echo -e "${GREEN}✓${NC} Identidade configurada globalmente"
+            echo "[OK] Identidade configurada globalmente"
         else
             git config user.name "$GIT_NAME"
             git config user.email "$GIT_EMAIL"
-            echo -e "${GREEN}✓${NC} Identidade configurada localmente"
+            echo "[OK] Identidade configurada localmente"
         fi
 
-        echo -e "${GREEN}[INFO]${NC} Nome: $GIT_NAME"
-        echo -e "${GREEN}[INFO]${NC} Email: $GIT_EMAIL"
+        echo "[INFO] Nome: $GIT_NAME"
+        echo "[INFO] Email: $GIT_EMAIL"
     else
-        echo -e "${GREEN}✓${NC} Identidade Git configurada"
-        echo -e "${GREEN}[INFO]${NC} Nome: $GIT_NAME"
-        echo -e "${GREEN}[INFO]${NC} Email: $GIT_EMAIL"
+        echo "[OK] Identidade configurada"
+        echo "[INFO] Nome: $GIT_NAME"
+        echo "[INFO] Email: $GIT_EMAIL"
     fi
 }
 
-# Função para verificar se o ssh-agent está rodando
-check_ssh_agent() {
-    echo -e "${BLUE}[SSH]${NC} Verificando ssh-agent..."
-
-    if ! pgrep -u "$USER" ssh-agent > /dev/null; then
-        echo -e "${YELLOW}[AVISO]${NC} ssh-agent não está rodando. Iniciando..."
-        eval "$(ssh-agent -s)"
-        echo -e "${GREEN}✓${NC} ssh-agent iniciado"
-    else
-        echo -e "${GREEN}✓${NC} ssh-agent já está rodando"
-    fi
-}
-
-# Função para verificar se há chaves SSH carregadas
-check_ssh_keys_loaded() {
-    echo -e "${BLUE}[SSH]${NC} Verificando chaves SSH carregadas..."
-
-    if ! ssh-add -l > /dev/null 2>&1; then
-        echo -e "${YELLOW}[AVISO]${NC} Nenhuma chave SSH carregada no ssh-agent"
-        echo -e "${BLUE}[INFO]${NC} Procurando chaves SSH disponíveis..."
-
-        # Procurar por chaves SSH comuns
-        SSH_KEYS=(
-            "$HOME/.ssh/id_ed25519"
-            "$HOME/.ssh/id_rsa"
-            "$HOME/.ssh/id_ecdsa"
-        )
-
-        KEY_FOUND=false
-        for key in "${SSH_KEYS[@]}"; do
-            if [ -f "$key" ]; then
-                echo -e "${BLUE}[INFO]${NC} Encontrada chave: $key"
-                echo -e "${BLUE}[INFO]${NC} Adicionando chave ao ssh-agent..."
-
-                if ssh-add "$key" 2>/dev/null; then
-                    echo -e "${GREEN}✓${NC} Chave adicionada com sucesso"
-                    KEY_FOUND=true
-                    break
-                else
-                    echo -e "${YELLOW}[AVISO]${NC} Falha ao adicionar chave (pode precisar de senha)"
-                    # Tentar adicionar com interação do usuário
-                    ssh-add "$key"
-                    if [ $? -eq 0 ]; then
-                        KEY_FOUND=true
-                        break
-                    fi
-                fi
-            fi
-        done
-
-        if [ "$KEY_FOUND" = false ]; then
-            echo -e "${RED}[ERRO]${NC} Nenhuma chave SSH encontrada!"
-            echo -e "${YELLOW}[DICA]${NC} Execute: ssh-keygen -t ed25519 -C \"seu-email@example.com\""
-            exit 1
-        fi
-    else
-        echo -e "${GREEN}✓${NC} Chaves SSH carregadas:"
-        ssh-add -l | sed 's/^/  /'
-    fi
-}
-
-# Função para testar conexão SSH com GitHub
-test_github_ssh() {
-    echo -e "${BLUE}[SSH]${NC} Testando conexão SSH com GitHub..."
-
-    # Timeout de 10 segundos para a conexão
-    if timeout 10 ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
-        echo -e "${GREEN}✓${NC} Autenticação SSH com GitHub bem-sucedida!"
-        # Extrair nome de usuário
-        USERNAME=$(timeout 10 ssh -T git@github.com 2>&1 | grep -o "Hi [^!]*" | cut -d' ' -f2)
-        echo -e "${GREEN}[INFO]${NC} Conectado como: $USERNAME"
-        return 0
-    else
-        echo -e "${RED}[ERRO]${NC} Falha na autenticação SSH com GitHub!"
-        echo -e "${YELLOW}[DICA]${NC} Verifique se adicionou sua chave SSH ao GitHub:"
-        echo -e "${YELLOW}        ${NC}https://github.com/settings/keys"
-        echo ""
-        echo -e "${YELLOW}[DICA]${NC} Copie sua chave pública com:"
-
-        # Mostrar qual chave pública usar
-        if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
-            echo -e "${YELLOW}        ${NC}cat ~/.ssh/id_ed25519.pub"
-        elif [ -f "$HOME/.ssh/id_rsa.pub" ]; then
-            echo -e "${YELLOW}        ${NC}cat ~/.ssh/id_rsa.pub"
-        fi
-
-        exit 1
-    fi
-}
-
-# Função para verificar e converter URL remota para SSH
 check_remote_url() {
-    echo -e "${BLUE}[GIT]${NC} Verificando URL do repositório remoto..."
+    echo "[GIT] Verificando URL remota..."
 
     REMOTE_URL=$(git config --get remote.origin.url)
 
     if [ -z "$REMOTE_URL" ]; then
-        echo -e "${RED}[ERRO]${NC} Nenhum remote 'origin' configurado!"
+        echo "[ERRO] Nenhum remote 'origin' configurado!"
         exit 1
     fi
 
-    # Verificar se está usando HTTPS
     if echo "$REMOTE_URL" | grep -q "https://"; then
-        echo -e "${YELLOW}[AVISO]${NC} Remote está configurado com HTTPS: $REMOTE_URL"
+        echo "[AVISO] Remote está em HTTPS"
+        echo "[INFO] Atual: $REMOTE_URL"
 
-        # Converter HTTPS para SSH
         SSH_URL=$(echo "$REMOTE_URL" | sed 's|https://github.com/|git@github.com:|')
+        echo "[INFO] SSH: $SSH_URL"
 
-        echo -e "${BLUE}[INFO]${NC} Convertendo para SSH: $SSH_URL"
-        echo -ne "${YELLOW}[PERGUNTA]${NC} Deseja alterar para SSH? (s/N): "
+        echo -n "Converter para SSH? (s/N): "
         read -r response
 
         if [[ "$response" =~ ^[Ss]$ ]]; then
             git remote set-url origin "$SSH_URL"
-            echo -e "${GREEN}✓${NC} URL remota alterada para SSH"
+            echo "[OK] URL alterada para SSH"
         else
-            echo -e "${RED}[ERRO]${NC} Este script requer SSH. Altere manualmente com:"
-            echo -e "${YELLOW}        ${NC}git remote set-url origin $SSH_URL"
+            echo "[ERRO] Este script requer SSH!"
+            echo "[DICA] Execute: git remote set-url origin $SSH_URL"
             exit 1
         fi
     else
-        echo -e "${GREEN}✓${NC} Remote configurado com SSH: $REMOTE_URL"
+        echo "[OK] Remote em SSH"
+        echo "[INFO] $REMOTE_URL"
     fi
 }
 
-# Função para verificar se há modificações
 check_modifications() {
+    echo "[GIT] Verificando modificações..."
+
     if [ -z "$(git status --porcelain)" ]; then
-        echo -e "${YELLOW}[AVISO]${NC} Não há modificações para commitar."
+        echo "[AVISO] Não há modificações para commitar"
         exit 0
     fi
+
+    echo "[OK] Modificações detectadas"
 }
 
-# Processar argumentos
+# ============================================================================
+# MODO INTERATIVO
+# ============================================================================
+
+interactive_mode() {
+    echo "════════════════════════════════════════"
+    echo "  Modo Interativo"
+    echo "════════════════════════════════════════"
+
+    # PASSO 1: TAG
+    echo ""
+    echo "────────────────────────────────────────"
+    echo "  PASSO 1/3: Definir Tag"
+    echo "────────────────────────────────────────"
+    echo ""
+    echo "[EXEMPLO] v2.9.1, v1.0.0-beta, v3.2.1-rc.1"
+    echo ""
+    echo -n "Digite a versão da tag: "
+    read -r TAG
+
+    if [ -z "$TAG" ]; then
+        echo "[ERRO] Tag é obrigatória!"
+        exit 1
+    fi
+
+    validate_tag_format "$TAG"
+
+    if git rev-parse "$TAG" >/dev/null 2>&1; then
+        echo "[ERRO] A tag $TAG já existe!"
+        echo "[DICA] Use: git tag -d $TAG"
+        exit 1
+    fi
+
+    echo "[OK] Tag definida: $TAG"
+
+    # PASSO 2: MENSAGEM DA TAG
+    echo ""
+    echo "────────────────────────────────────────"
+    echo "  PASSO 2/3: Mensagem da Tag"
+    echo "────────────────────────────────────────"
+
+    TAG_MSG=$(read_input_or_file \
+        "Mensagem da tag:" \
+        "Release $TAG - Novos recursos\\n\\n- feat: Nova funcionalidade\\n- fix: Correção de bug")
+
+    # PASSO 3: MENSAGEM DO COMMIT
+    echo ""
+    echo "────────────────────────────────────────"
+    echo "  PASSO 3/3: Mensagem do Commit"
+    echo "────────────────────────────────────────"
+
+    COMMIT_MSG=$(read_input_or_file \
+        "Mensagem do commit:" \
+        "chore: Atualiza versão para $TAG\\n\\nPrepara release $TAG")
+
+    echo ""
+    echo "[OK] Informações coletadas!"
+    echo ""
+}
+
+# ============================================================================
+# PROCESSAMENTO PRINCIPAL
+# ============================================================================
+
+LEGACY_MODE=false
+TAG_MSG_FILE=""
+COMMIT_MSG_FILE=""
+
 while [ $# -gt 0 ]; do
     case "$1" in
-        --msg)
-            MSG_FILE="$2"
-            shift 2
-            ;;
         --tag)
             TAG="$2"
+            LEGACY_MODE=true
+            shift 2
+            ;;
+        --tagmsg)
+            TAG_MSG_FILE="$2"
+            shift 2
+            ;;
+        --msg)
+            COMMIT_MSG_FILE="$2"
             shift 2
             ;;
         -h|--help)
             show_usage
             ;;
         *)
-            echo -e "${RED}[ERRO]${NC} Opção desconhecida: $1"
+            echo "[ERRO] Opção desconhecida: $1"
             show_usage
             ;;
     esac
 done
 
-# Validar argumentos obrigatórios
-if [ -z "$MSG_FILE" ]; then
-    echo -e "${RED}[ERRO]${NC} O arquivo de mensagem (--msg) é obrigatório!"
-    show_usage
-fi
+# Banner
+show_banner
 
-# Verificar se o arquivo de mensagem existe
-if [ ! -f "$MSG_FILE" ]; then
-    echo -e "${RED}[ERRO]${NC} Arquivo não encontrado: $MSG_FILE"
-    exit 1
-fi
-
-# Verificar se o arquivo não está vazio
-if [ ! -s "$MSG_FILE" ]; then
-    echo -e "${RED}[ERRO]${NC} O arquivo de mensagem está vazio: $MSG_FILE"
-    exit 1
-fi
-
-# Ler mensagem do arquivo
-COMMIT_MSG=$(cat "$MSG_FILE")
-
-# Banner inicial
-echo ""
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  Git Upload com Autenticação SSH${NC}"
-echo -e "${GREEN}========================================${NC}"
+# VALIDAÇÕES SSH
+echo "════════════════════════════════════════"
+echo "  Validação SSH"
+echo "════════════════════════════════════════"
 echo ""
 
-# Verificações de SSH (ANTES das verificações Git)
+test_github_ssh
 check_ssh_agent
 check_ssh_keys_loaded
-test_github_ssh
+
 echo ""
 
-# Verificações do repositório Git
+# VALIDAÇÕES GIT
+echo "════════════════════════════════════════"
+echo "  Validação Git"
+echo "════════════════════════════════════════"
+echo ""
+
 check_git_repo
 check_git_identity
 check_remote_url
 check_modifications
 
-echo -e "${GREEN}[INFO]${NC} Branch atual: $BRANCH"
+echo ""
+echo "[INFO] Branch atual: $BRANCH"
 echo ""
 
-# Mostrar status antes do commit
-echo -e "${YELLOW}=== Status atual ===${NC}"
+# MODO DE OPERAÇÃO
+if [ "$LEGACY_MODE" = true ]; then
+    echo "[INFO] Modo legado (argumentos)"
+
+    if [ -z "$TAG" ] || [ -z "$TAG_MSG_FILE" ] || [ -z "$COMMIT_MSG_FILE" ]; then
+        echo "[ERRO] No modo legado, --tag, --tagmsg e --msg são obrigatórios!"
+        show_usage
+    fi
+
+    validate_tag_format "$TAG"
+
+    if [ ! -f "$TAG_MSG_FILE" ]; then
+        echo "[ERRO] Arquivo não encontrado: $TAG_MSG_FILE"
+        exit 1
+    fi
+
+    if [ ! -f "$COMMIT_MSG_FILE" ]; then
+        echo "[ERRO] Arquivo não encontrado: $COMMIT_MSG_FILE"
+        exit 1
+    fi
+
+    if [ ! -s "$TAG_MSG_FILE" ]; then
+        echo "[ERRO] Arquivo de tag vazio!"
+        exit 1
+    fi
+
+    if [ ! -s "$COMMIT_MSG_FILE" ]; then
+        echo "[ERRO] Arquivo de commit vazio!"
+        exit 1
+    fi
+
+    if git rev-parse "$TAG" >/dev/null 2>&1; then
+        echo "[ERRO] A tag $TAG já existe!"
+        exit 1
+    fi
+
+    TAG_MSG=$(cat "$TAG_MSG_FILE")
+    COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+    echo "[OK] Tag: $TAG"
+    echo "[OK] Mensagem da tag: $TAG_MSG_FILE"
+    echo "[OK] Mensagem do commit: $COMMIT_MSG_FILE"
+else
+    interactive_mode
+fi
+
+# EXECUÇÃO
+echo ""
+echo "════════════════════════════════════════"
+echo "  Processamento"
+echo "════════════════════════════════════════"
+echo ""
+
+echo "[STATUS] Arquivos modificados:"
 git status --short
 echo ""
 
-# Adicionar todos os arquivos modificados
-echo -e "${GREEN}[1/4]${NC} Adicionando arquivos modificados..."
+echo "[1/5] Adicionando arquivos..."
 if git add .; then
-    echo -e "${GREEN}✓${NC} Arquivos adicionados com sucesso"
+    echo "[OK] Arquivos adicionados"
 else
-    echo -e "${RED}[ERRO]${NC} Falha ao adicionar arquivos"
+    echo "[ERRO] Falha ao adicionar"
     exit 1
 fi
 echo ""
 
-# Fazer commit
-echo -e "${GREEN}[2/4]${NC} Criando commit..."
-if git commit -F "$MSG_FILE"; then
-    echo -e "${GREEN}✓${NC} Commit criado com sucesso"
+echo "[2/5] Criando commit..."
+if echo "$COMMIT_MSG" | git commit -F -; then
+    echo "[OK] Commit criado"
 else
-    echo -e "${RED}[ERRO]${NC} Falha ao criar commit"
+    echo "[ERRO] Falha no commit"
     exit 1
 fi
 echo ""
 
-# Criar tag se especificada
-if [ -n "$TAG" ]; then
-    echo -e "${GREEN}[3/4]${NC} Criando tag: $TAG"
-
-    # Verificar se a tag já existe
-    if git rev-parse "$TAG" >/dev/null 2>&1; then
-        echo -e "${RED}[ERRO]${NC} A tag $TAG já existe!"
-        echo -e "${YELLOW}[INFO]${NC} Use 'git tag -d $TAG' para removê-la localmente"
-        exit 1
-    fi
-
-    if git tag -a "$TAG" -F "$MSG_FILE"; then
-        echo -e "${GREEN}✓${NC} Tag $TAG criada com sucesso"
-    else
-        echo -e "${RED}[ERRO]${NC} Falha ao criar tag"
-        exit 1
-    fi
-    echo ""
+echo "[3/5] Criando tag: $TAG"
+if echo "$TAG_MSG" | git tag -a "$TAG" -F -; then
+    echo "[OK] Tag $TAG criada"
+else
+    echo "[ERRO] Falha na tag"
+    exit 1
 fi
+echo ""
 
-# Fazer push
-echo -e "${GREEN}[4/4]${NC} Enviando alterações para o repositório remoto..."
+echo "[4/5] Enviando commit..."
 if git push origin "$BRANCH"; then
-    echo -e "${GREEN}✓${NC} Push realizado com sucesso"
+    echo "[OK] Push do commit realizado"
 else
-    echo -e "${RED}[ERRO]${NC} Falha ao fazer push"
+    echo "[ERRO] Falha no push"
     exit 1
 fi
+echo ""
 
-# Fazer push das tags se foram criadas
-if [ -n "$TAG" ]; then
-    echo -e "${GREEN}[EXTRA]${NC} Enviando tag para o repositório remoto..."
-    if git push origin "$TAG"; then
-        echo -e "${GREEN}✓${NC} Tag enviada com sucesso"
-    else
-        echo -e "${RED}[ERRO]${NC} Falha ao enviar tag"
-        exit 1
-    fi
+echo "[5/5] Enviando tag..."
+if git push origin "$TAG"; then
+    echo "[OK] Push da tag realizado"
+else
+    echo "[ERRO] Falha no push da tag"
+    exit 1
 fi
+echo ""
 
+# RESUMO
+echo "════════════════════════════════════════"
+echo "  Concluído com Sucesso!"
+echo "════════════════════════════════════════"
 echo ""
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  Upload concluído com sucesso!${NC}"
-echo -e "${GREEN}========================================${NC}"
+echo "Branch:  $BRANCH"
+echo "Tag:     $TAG"
+echo "Commit:  ${COMMIT_MSG:0:50}..."
 echo ""
-echo -e "Commit: ${COMMIT_MSG:0:50}..."
-[ -n "$TAG" ] && echo -e "Tag: $TAG"
-echo -e "Branch: $BRANCH"
+echo "Todas as alterações foram enviadas!"
 echo ""
