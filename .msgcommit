@@ -1,0 +1,7 @@
+chore: bump version to v0.0.3
+
+- Replace corrupted box-drawing characters with clean ASCII/UTF-8
+- Add ASCII art banner (auto4git logotype) to show_banner()
+- Display banner at the top of --help output via show_usage()
+- Replace hardcoded "CachyOS" in SSH tutorial with dynamic $(hostname)
+- Update VERSION variable to 0.0.3

@@ -1,0 +1,8 @@
+Release v0.0.3 - Melhorias visuais e de usabilidade
+
+- Novo banner ASCII art com logotipo Auto4Git
+- Banner exibido também no topo do --help
+- Substituição de caracteres box-drawing corruptos por
+  sequências ASCII/UTF-8 padrão em todo o script
+- Remoção da referência hardcoded "CachyOS" no tutorial SSH,
+  substituída por hostname dinâmico via $(hostname)

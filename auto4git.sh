@@ -1,41 +1,44 @@
 #!/bin/bash
 
 # ============================================================================
-# Auto4Git - Automação Git com SSH
+# Auto4Git - Git Automation with SSH
 # ============================================================================
-# Autor:       Sandro Dias (gitdias)
-# Contato:     pro.sandrodias@gmail.com
-# Repositório: https://github.com/gitdias/Auto4Git
-# Versão:      0.0.2
-# Licença:     MIT
+# Author:     Sandro Dias (gitdias)
+# Contact:    pro.sandrodias@gmail.com
+# Repository: https://github.com/gitdias/Auto4Git
+# Version:    0.0.3
+# License:    MIT
 # ============================================================================
-# Descrição:   Automatiza commit, tag e push com validação SSH completa
-# Sintaxe:     ./auto4git.sh [--tag <versão> --tagmsg <arquivo> --msg <arquivo>]
+# Description: Automates commit, tag and push with full SSH validation
+# Syntax:      ./auto4git.sh [--tag <version> --tagmsg <file> --msg <file>]
 # ============================================================================
 
-# Variáveis globais
+# Global variables
 TAG=""
 TAG_MSG=""
 COMMIT_MSG=""
 BRANCH=$(git branch --show-current 2>/dev/null)
-VERSION="0.0.2"
+VERSION="0.0.3"
 
 # ============================================================================
-# FUNÇÕES DE UTILIDADE
+# UTILITY FUNCTIONS
 # ============================================================================
 
-# Exibir banner
+# Display ASCII art banner
 show_banner() {
     echo ""
-    echo "════════════════════════════════════════"
-    echo "         Auto4Git v${VERSION}"
-    echo "    Automação Git com SSH"
-    echo "════════════════════════════════════════"
+    echo "             _        _  _         _ _   "
+    echo "  __ _ _   _| |_ ___ | || |   __ _(_) |_ "
+    echo " / _\` | | | | __/ _ \| || |_ / _\` | | __|"
+    echo "| (_| | |_| | || (_) |__   _| (_| | | |_ "
+    echo " \__,_|\__,_|\__\___/   |_|  \__, |_|\__|"
+    echo "─────────────────────────────|___/ v${VERSION}"
     echo ""
 }
 
-# Exibir uso
+# Display usage/help
 show_usage() {
+    show_banner
     echo "Uso: $0 [opções]"
     echo ""
     echo "Modo Interativo (padrão):"
@@ -56,7 +59,7 @@ show_usage() {
     exit 0
 }
 
-# Ler input multi-linha ou arquivo
+# Read multi-line input or file path
 read_input_or_file() {
     local prompt="$1"
     local example="$2"
@@ -70,10 +73,10 @@ read_input_or_file() {
     echo "          OU informe o caminho do arquivo"
     echo ""
 
-    # Ler primeira linha
+    # Read first line
     read -r first_line
 
-    # Verificar se é um arquivo
+    # Check if input is a file path
     if [ -f "$first_line" ]; then
         if [ ! -s "$first_line" ]; then
             echo "[ERRO] Arquivo vazio: $first_line"
@@ -82,7 +85,7 @@ read_input_or_file() {
         result=$(cat "$first_line")
         echo "[OK] Conteúdo lido do arquivo: $first_line"
     else
-        # É texto direto, ler até Ctrl+D
+        # Treat as direct text input, read until Ctrl+D
         result="$first_line"
         while IFS= read -r line; do
             result="${result}"$'\n'"${line}"
@@ -90,7 +93,7 @@ read_input_or_file() {
         echo "[OK] Texto capturado com sucesso"
     fi
 
-    # Validar se não está vazio
+    # Validate non-empty result
     if [ -z "$result" ]; then
         echo "[ERRO] Conteúdo não pode ser vazio!"
         exit 1
@@ -99,7 +102,7 @@ read_input_or_file() {
     echo "$result"
 }
 
-# Validar formato de tag semântico
+# Validate semantic version tag format
 validate_tag_format() {
     local tag="$1"
 
@@ -111,7 +114,7 @@ validate_tag_format() {
 }
 
 # ============================================================================
-# TUTORIAL SSH
+# SSH TUTORIAL
 # ============================================================================
 
 show_ssh_tutorial() {
@@ -158,7 +161,7 @@ show_ssh_tutorial() {
     echo ""
     echo "  1. Acesse: https://github.com/settings/keys"
     echo "  2. Clique em \"New SSH key\""
-    echo "  3. Título: CachyOS ($(date +%Y)) (ou outro descritivo)"
+    echo "  3. Título: $(hostname) ($(date +%Y)) (ou outro descritivo)"
     echo "  4. Cole a chave pública copiada"
     echo "  5. Clique em \"Add SSH key\""
     echo ""
@@ -172,13 +175,13 @@ show_ssh_tutorial() {
     echo "  → Deve retornar: \"Hi username! You've successfully...\""
     echo ""
     echo "════════════════════════════════════════════════════════════════"
-    echo "Após configurar, execute o Auto4Git novamente!"
+    echo "  Após configurar, execute o Auto4Git novamente!"
     echo "════════════════════════════════════════════════════════════════"
     echo ""
 }
 
 # ============================================================================
-# VALIDAÇÕES SSH
+# SSH VALIDATIONS
 # ============================================================================
 
 test_github_ssh() {
@@ -218,6 +221,7 @@ check_ssh_keys_loaded() {
 
     echo "[INFO] Procurando chaves SSH..."
 
+    # Priority order: ed25519 > rsa > ecdsa
     SSH_KEYS=(
         "$HOME/.ssh/id_ed25519"
         "$HOME/.ssh/id_rsa"
@@ -246,7 +250,7 @@ check_ssh_keys_loaded() {
 }
 
 # ============================================================================
-# VALIDAÇÕES GIT
+# GIT VALIDATIONS
 # ============================================================================
 
 check_git_repo() {
@@ -391,7 +395,7 @@ check_modifications() {
 }
 
 # ============================================================================
-# MODO INTERATIVO
+# INTERACTIVE MODE
 # ============================================================================
 
 interactive_mode() {
@@ -399,7 +403,7 @@ interactive_mode() {
     echo "  Modo Interativo"
     echo "════════════════════════════════════════"
 
-    # PASSO 1: TAG
+    # STEP 1: TAG
     echo ""
     echo "────────────────────────────────────────"
     echo "  PASSO 1/3: Definir Tag"
@@ -425,7 +429,7 @@ interactive_mode() {
 
     echo "[OK] Tag definida: $TAG"
 
-    # PASSO 2: MENSAGEM DA TAG
+    # STEP 2: TAG MESSAGE
     echo ""
     echo "────────────────────────────────────────"
     echo "  PASSO 2/3: Mensagem da Tag"
@@ -433,9 +437,9 @@ interactive_mode() {
 
     TAG_MSG=$(read_input_or_file \
         "Mensagem da tag:" \
-        "Release $TAG - Novos recursos\\n\\n- feat: Nova funcionalidade\\n- fix: Correção de bug")
+        "Release $TAG - Novos recursos\n\n- feat: Nova funcionalidade\n- fix: Correção de bug")
 
-    # PASSO 3: MENSAGEM DO COMMIT
+    # STEP 3: COMMIT MESSAGE
     echo ""
     echo "────────────────────────────────────────"
     echo "  PASSO 3/3: Mensagem do Commit"
@@ -443,7 +447,7 @@ interactive_mode() {
 
     COMMIT_MSG=$(read_input_or_file \
         "Mensagem do commit:" \
-        "chore: Atualiza versão para $TAG\\n\\nPrepara release $TAG")
+        "chore: Atualiza versão para $TAG\n\nPrepara release $TAG")
 
     echo ""
     echo "[OK] Informações coletadas!"
@@ -451,7 +455,7 @@ interactive_mode() {
 }
 
 # ============================================================================
-# PROCESSAMENTO PRINCIPAL
+# MAIN PROCESSING
 # ============================================================================
 
 LEGACY_MODE=false
@@ -486,7 +490,7 @@ done
 # Banner
 show_banner
 
-# VALIDAÇÕES SSH
+# SSH VALIDATIONS
 echo "════════════════════════════════════════"
 echo "  Validação SSH"
 echo "════════════════════════════════════════"
@@ -498,7 +502,7 @@ check_ssh_keys_loaded
 
 echo ""
 
-# VALIDAÇÕES GIT
+# GIT VALIDATIONS
 echo "════════════════════════════════════════"
 echo "  Validação Git"
 echo "════════════════════════════════════════"
@@ -513,7 +517,7 @@ echo ""
 echo "[INFO] Branch atual: $BRANCH"
 echo ""
 
-# MODO DE OPERAÇÃO
+# OPERATION MODE
 if [ "$LEGACY_MODE" = true ]; then
     echo "[INFO] Modo legado (argumentos)"
 
@@ -559,7 +563,7 @@ else
     interactive_mode
 fi
 
-# EXECUÇÃO
+# EXECUTION
 echo ""
 echo "════════════════════════════════════════"
 echo "  Processamento"
@@ -615,7 +619,7 @@ else
 fi
 echo ""
 
-# RESUMO
+# SUMMARY
 echo "════════════════════════════════════════"
 echo "  Concluído com Sucesso!"
 echo "════════════════════════════════════════"
