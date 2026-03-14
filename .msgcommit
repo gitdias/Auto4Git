@@ -1,7 +1,13 @@
-chore: bump version to v0.0.3
+chore: bump version to v0.0.4
 
-- Replace corrupted box-drawing characters with clean ASCII/UTF-8
-- Add ASCII art banner (auto4git logotype) to show_banner()
-- Display banner at the top of --help output via show_usage()
-- Replace hardcoded "CachyOS" in SSH tutorial with dynamic $(hostname)
-- Update VERSION variable to 0.0.3
+- Implement i18n system with detect_locale(), t() and i18n_get() functions
+- Add automatic locale detection from $LANG / $LC_ALL / $LC_MESSAGES
+- Support pt_BR as default locale and en_US as fallback
+- Route all user-facing messages through i18n keys (no bare strings remain)
+- Add i18n domains: prefix, usage, ssh, tutorial, git, interactive,
+  input, tag, legacy, proc, section, summary
+- Add .gitignore file (.msgtag, .msgcommit, editors, OS files, logs)
+- Migrate README.md to English with i18n documentation section
+- Consolidate and translate CHANGELOG.md to English (v0.0.1–v0.0.4)
+- Convert script header comments to technical English
+- Update VERSION variable to 0.0.4

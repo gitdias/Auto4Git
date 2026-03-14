@@ -1,0 +1,38 @@
+# ============================================================================
+# Auto4Git - .gitignore
+# ============================================================================
+
+# Legacy message files (used with --tagmsg and --msg flags)
+*.msgtag
+*.msgcommit
+.msgtag
+.msgcommit
+.tagmsg
+.tag
+.commitmsg
+.commit
+
+
+
+# Temporary and editor files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE and editor directories
+.vscode/
+.idea/
+*.code-workspace
+
+# Test artifacts
+/test/
+/tests/
+
+# Log files
+*.log
