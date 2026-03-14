@@ -28,7 +28,7 @@ LOCALE=""
 # ============================================================================
 # I18N - LOCALE DETECTION
 # ============================================================================
-
+#
 # Detect system locale and normalise to supported locale code
 detect_locale() {
     local sys_locale=""

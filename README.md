@@ -29,7 +29,7 @@ validation, identity configuration, and i18n support.
 
 ## Prerequisites
 
-- Git installed
+- Git installed.
 - Bash 4.0 or higher
 - SSH key configured (the script can guide you through the setup)
 - GitHub access via SSH
